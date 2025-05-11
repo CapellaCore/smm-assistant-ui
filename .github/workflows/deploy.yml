@@ -34,6 +34,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_API_URL: 'https://smm-assistant-java-213242908814.us-central1.run.app'
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

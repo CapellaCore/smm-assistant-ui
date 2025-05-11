@@ -58,11 +58,23 @@ const ChatWindow = () => {
       }
     } catch (error) {
       console.error('API Error:', error);
+      let errorMessage = 'Failed to send message. Please try again.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Request timed out. Please try again.';
+        } else if (error.response) {
+          errorMessage = `Server error: ${error.response.status}`;
+        } else if (error.request) {
+          errorMessage = 'No response received from server. Please check your connection.';
+        }
+      }
+      
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to send message. Please try again.',
+        description: errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     } finally {
