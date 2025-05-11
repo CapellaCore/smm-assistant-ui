@@ -16,6 +16,10 @@ interface Message {
   isUser: boolean;
 }
 
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://smm-assistant-java-213242908814.us-central1.run.app'
+  : '';
+
 const ChatWindow = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -33,7 +37,7 @@ const ChatWindow = () => {
     try {
       console.log('Sending message to API:', userMessage);
       const response = await axios.post(
-        '/api/v1/instagram/ask',
+        `${API_BASE_URL}/api/v1/instagram/ask`,
         null,
         {
           params: {
