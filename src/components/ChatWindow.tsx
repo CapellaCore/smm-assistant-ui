@@ -10,15 +10,12 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { config } from '../config';
 
 interface Message {
   text: string;
   isUser: boolean;
 }
-
-const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://smm-assistant-java-213242908814.us-central1.run.app'
-  : '';
 
 const ChatWindow = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,7 +34,7 @@ const ChatWindow = () => {
     try {
       console.log('Sending message to API:', userMessage);
       const response = await axios.post(
-        `${API_BASE_URL}/api/v1/instagram/ask`,
+        `${config.apiUrl}/api/v1/instagram/ask`,
         null,
         {
           params: {
