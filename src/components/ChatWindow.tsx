@@ -39,8 +39,8 @@ const ChatWindow = () => {
         null,
         {
           params: {
-            message: userMessage,
-            user_id: getSessionId()
+            user_id: getSessionId(),
+            message: userMessage
           },
           headers: {
             'accept': '*/*'
