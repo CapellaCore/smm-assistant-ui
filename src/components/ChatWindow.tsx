@@ -36,14 +36,14 @@ const ChatWindow = () => {
       console.log('Sending message to API:', userMessage);
       const response = await axios.post(
         `${config.apiUrl}/api/v1/smm-assistant/ask`,
+        '',
         {
-          user_id: getSessionId(),
-          message: userMessage          
-        },
-        {
+          params: {
+            userId: getSessionId(),
+            message: userMessage
+          },
           headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'accept': '*/*'
           }
         }
       );
