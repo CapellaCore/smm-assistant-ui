@@ -39,7 +39,7 @@ const ChatWindow = () => {
         null,
         {
           params: {
-            user_id: getSessionId(),
+            userId: getSessionId(),
             message: userMessage
           },
           headers: {
