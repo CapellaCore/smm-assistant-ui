@@ -11,6 +11,7 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { config } from '../config';
+import { getSessionId } from '../utils/cookies';
 
 interface Message {
   text: string;
@@ -34,11 +35,12 @@ const ChatWindow = () => {
     try {
       console.log('Sending message to API:', userMessage);
       const response = await axios.post(
-        `${config.apiUrl}/api/v1/instagram/ask`,
+        `${config.apiUrl}/api/v1/smm-assistant/ask`,
         null,
         {
           params: {
-            message: userMessage
+            message: userMessage,
+            user_id: getSessionId()
           },
           headers: {
             'accept': '*/*'
@@ -83,8 +85,20 @@ const ChatWindow = () => {
   };
 
   return (
-    <Container maxW="container.md" h="100vh" py={4}>
-      <VStack h="full" spacing={4}>
+    <Container 
+      maxW={{ base: "100%", md: "90%", lg: "800px" }} 
+      h="100vh" 
+      py={4}
+      px={{ base: 2, md: 4 }}
+      display="flex"
+      flexDirection="column"
+    >
+      <VStack 
+        h="full" 
+        spacing={4}
+        maxH="100vh"
+        overflow="hidden"
+      >
         <Box
           flex={1}
           w="full"
@@ -92,6 +106,18 @@ const ChatWindow = () => {
           p={4}
           borderRadius="md"
           bg="gray.50"
+          css={{
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-track': {
+              width: '6px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: 'gray.300',
+              borderRadius: '24px',
+            },
+          }}
         >
           {messages.map((message, index) => (
             <Flex
@@ -100,7 +126,7 @@ const ChatWindow = () => {
               mb={4}
             >
               <Box
-                maxW="70%"
+                maxW={{ base: "85%", md: "70%" }}
                 bg={message.isUser ? 'blue.500' : 'white'}
                 color={message.isUser ? 'white' : 'black'}
                 p={3}
@@ -112,7 +138,14 @@ const ChatWindow = () => {
             </Flex>
           ))}
         </Box>
-        <Flex w="full" gap={2}>
+        <Flex 
+          w="full" 
+          gap={2}
+          position="sticky"
+          bottom={0}
+          bg="white"
+          pt={2}
+        >
           <Input
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
