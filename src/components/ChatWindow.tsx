@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -8,6 +8,7 @@ import {
   Container,
   Flex,
   useToast,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { config } from '../config';
@@ -22,7 +23,18 @@ const ChatWindow = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
   const toast = useToast();
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -87,16 +99,17 @@ const ChatWindow = () => {
   return (
     <Container 
       maxW={{ base: "100%", md: "90%", lg: "800px" }} 
-      h="100vh" 
+      h={isMobile ? `${windowHeight}px` : "100vh"}
       py={4}
       px={{ base: 2, md: 4 }}
       display="flex"
       flexDirection="column"
+      position="relative"
     >
       <VStack 
         h="full" 
         spacing={4}
-        maxH="100vh"
+        maxH={isMobile ? `${windowHeight}px` : "100vh"}
         overflow="hidden"
       >
         <Box
@@ -145,6 +158,7 @@ const ChatWindow = () => {
           bottom={0}
           bg="white"
           pt={2}
+          pb={isMobile ? 4 : 2}
         >
           <Input
             value={inputMessage}
