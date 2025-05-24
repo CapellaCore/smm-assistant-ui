@@ -1,22 +1,23 @@
-name: Deploy to GitHub Pages
+name: Deploy to Google Cloud Run
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main,cloud_run ]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: smm-assistant-ui
+  REGION: us-central1
+  REPO_NAME: smm-docker
+  IMAGE_NAME: smm-assistant-ui
+  SERVICE_NAME_DEV: smm-assistant-ui-dev
+  SERVICE_NAME_PROD: smm-assistant-ui-prod
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,28 +32,48 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build
-        run: npm run build
+        run: npm run build && ls dist/assets
         env:
           NODE_ENV: production
-          VITE_API_URL: 'https://smm-assistant-java-213242908814.us-central1.run.app'
+          VITE_API_URL: ${{ github.ref == 'refs/heads/main' && 'https://smm-assistant-prod-553110626568.europe-west1.run.app' || 'https://smm-assistant-dev-553110626568.us-central1.run.app' }}
+          VITE_BASE_URL: '/smm-assistant-ui/'
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
         with:
-          enablement: true
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          path: './dist'
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4 
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+      - name: Build Docker image
+        run: |
+            docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest .
+
+      - name: Push Docker image
+        run: |
+            docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+              SERVICE_NAME=${SERVICE_NAME_PROD}
+              VITE_API_URL='https://smm-assistant-prod-553110626568.europe-west1.run.app'
+            else
+              SERVICE_NAME=${SERVICE_NAME_DEV}
+              VITE_API_URL='https://smm-assistant-dev-553110626568.us-central1.run.app'
+            fi
+            
+            gcloud run deploy $SERVICE_NAME \
+              --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest \
+              --platform managed \
+              --region $REGION \
+              --allow-unauthenticated \
+              --set-env-vars "VITE_API_URL=$VITE_API_URL,VITE_BASE_URL=/smm-assistant-ui/"
