@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://smm-assistant-java-213242908814.us-central1.run.app',
+        target: 'https://smm-assistant-dev-553110626568.us-central1.run.app',
         changeOrigin: true,
         secure: false,
       }
