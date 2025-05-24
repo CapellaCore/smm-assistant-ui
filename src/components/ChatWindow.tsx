@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import {useEffect, useState} from 'react';
 import {
   Box,
   VStack,
@@ -12,7 +12,8 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { config } from '../config';
-import { getSessionId } from '../utils/cookies';
+import {getAuthToken, storeTokenFromUrl, logout} from "../utils/auth.ts";
+import { useNavigate } from 'react-router-dom';
 
 interface Message {
   text: string;
@@ -28,6 +29,7 @@ const ChatWindow = () => {
   const isMobile = useBreakpointValue({ base: true, md: false });
 
   useEffect(() => {
+    storeTokenFromUrl();
     const handleResize = () => {
       setWindowHeight(window.innerHeight);
     };
@@ -35,6 +37,14 @@ const ChatWindow = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -51,11 +61,11 @@ const ChatWindow = () => {
         '',
         {
           params: {
-            userId: getSessionId(),
             message: userMessage
           },
           headers: {
-            'accept': '*/*'
+            'Authorization': `Bearer ${getAuthToken()}`,
+            'Accept': '*/*'
           }
         }
       );
@@ -172,6 +182,11 @@ const ChatWindow = () => {
             isLoading={isLoading}
           >
             Send
+          </Button>
+          <Button
+              colorScheme="red"
+              onClick={handleLogout}>
+            Logout
           </Button>
         </Flex>
       </VStack>
