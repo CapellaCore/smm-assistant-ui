@@ -1,5 +1,6 @@
 name: Deploy to GitHub Pages
 
+# Trigger workflow on push to KD branch or manual dispatch
 on:
   push:
     branches:
