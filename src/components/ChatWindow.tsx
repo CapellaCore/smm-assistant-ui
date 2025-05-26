@@ -12,7 +12,8 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { config } from '../config';
-import { getSessionId } from '../utils/cookies';
+import { getAuthToken, storeTokenFromUrl, logout } from '../utils/auth';
+import { useNavigate } from 'react-router-dom';
 
 interface Message {
   text: string;
@@ -26,8 +27,10 @@ const ChatWindow = () => {
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
   const toast = useToast();
   const isMobile = useBreakpointValue({ base: true, md: false });
+  const navigate = useNavigate();
 
   useEffect(() => {
+    storeTokenFromUrl();
     const handleResize = () => {
       setWindowHeight(window.innerHeight);
     };
@@ -35,6 +38,11 @@ const ChatWindow = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -51,11 +59,11 @@ const ChatWindow = () => {
         '',
         {
           params: {
-            userId: getSessionId(),
             message: userMessage
           },
           headers: {
-            'accept': '*/*'
+            'Authorization': `Bearer ${getAuthToken()}`,
+            'Accept': '*/*'
           }
         }
       );
@@ -172,6 +180,12 @@ const ChatWindow = () => {
             isLoading={isLoading}
           >
             Send
+          </Button>
+          <Button
+            colorScheme="red"
+            onClick={handleLogout}
+          >
+            Logout
           </Button>
         </Flex>
       </VStack>
