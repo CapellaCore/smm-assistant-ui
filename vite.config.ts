@@ -11,6 +11,11 @@ export default defineConfig({
         target: 'https://smm-assistant-dev-553110626568.us-central1.run.app',
         changeOrigin: true,
         secure: false,
+      },
+      '/oauth2': {
+        target: 'https://smm-assistant-dev-553110626568.us-central1.run.app',
+        changeOrigin: true,
+        secure: false,
       }
     }
   },
