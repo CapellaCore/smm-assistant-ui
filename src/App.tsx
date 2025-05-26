@@ -22,7 +22,7 @@ function App() {
 
   return (
     <ChakraProvider>
-      <Router>
+      <Router basename="/smm-assistant-ui">
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route
