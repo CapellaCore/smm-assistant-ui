@@ -7,11 +7,8 @@ import LoginPage from './components/LoginPage';
 function App() {
     const [isAuthChecked, setIsAuthChecked] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    console.log(' App.tsx started');
     useEffect(() => {
         storeTokenFromUrl();
-        const token = getAuthToken();
-        console.log('Token:', token);
         setIsAuthenticated(!!getAuthToken());
         setIsAuthChecked(true);
     }, []);
