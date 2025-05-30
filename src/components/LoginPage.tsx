@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Button, Heading, Text, VStack } from '@chakra-ui/react';
 import { config } from '../config';
 import { getAuthToken } from '../utils/auth';
-import { FaFacebook, FaInstagram } from 'react-icons/fa';
+import { FaFacebook } from 'react-icons/fa';
 
 const LoginPage = () => {
     const navigate = useNavigate();
@@ -15,7 +15,6 @@ const LoginPage = () => {
     }, [navigate]);
 
     const backendFacebookLoginUrl = `${config.apiUrl}/oauth2/authorization/facebook`;
-    const backendInstagramLoginUrl = `${config.apiUrl}/oauth2/authorization/instagram`;
 
     return (
         <Box
@@ -48,16 +47,6 @@ const LoginPage = () => {
                     leftIcon={<FaFacebook />}
                 >
                     Login with Facebook
-                </Button>
-                <Button
-                    as="a"
-                    href={backendInstagramLoginUrl}
-                    colorScheme="instagram"
-                    w="full"
-                    size="lg"
-                    leftIcon={<FaInstagram />}
-                >
-                    Login with Instagram
                 </Button>
             </VStack>
         </Box>
