@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   VStack,
@@ -14,9 +14,14 @@ import axios from 'axios';
 import { config } from '../config';
 import {getAuthToken, storeTokenFromUrl, logout} from "../utils/auth.ts";
 import { useNavigate } from 'react-router-dom';
+import MediaMessage from './MediaMessage';
+import { resolveMediaType } from '../utils/mediaUtils.tsx';
 
 interface Message {
-  text: string;
+  type: 'text' | 'image' | 'video';
+  content?: string;
+  url?: string;
+  caption?: string;
   isUser: boolean;
 }
 
@@ -45,41 +50,39 @@ const ChatWindow = () => {
     navigate('/');
   };
 
-
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     const userMessage = inputMessage;
     setInputMessage('');
-    setMessages((prev) => [...prev, { text: userMessage, isUser: true }]);
+    setMessages((prev) => [...prev, { type: 'text', content: userMessage, isUser: true },]);
     setIsLoading(true);
 
     try {
       console.log('Sending message to API:', userMessage);
       const response = await axios.post(
-        `${config.apiUrl}/api/v1/smm-assistant/ask`,
-        '',
-        {
-          params: {
-            message: userMessage
-          },
-          headers: {
-            'Authorization': `Bearer ${getAuthToken()}`,
-            'Accept': '*/*'
+          `${config.apiUrl}/api/v1/smm-assistant/ask`,
+          '',
+          {
+            params: { message: userMessage },
+            headers: {
+              Authorization: `Bearer ${getAuthToken()}`,
+              Accept: 'application/json',
+            },
           }
-        }
       );
 
-      console.log('API Response:', response.data);
-      
-      if (response.data) {
-        setMessages((prev) => [
-          ...prev,
-          { text: response.data, isUser: false },
-        ]);
-      } else {
-        throw new Error('Invalid response format from API');
-      }
+      const data = response.data;
+
+      const aiMessages: Message[] = (data.messages || []).map((msg: any) => ({
+        type: msg.type,
+        content: msg.content,
+        url: msg.url,
+        caption: msg.caption,
+        isUser: false,
+      }));
+
+      setMessages((prev) => [...prev, ...aiMessages]);
     } catch (error) {
       console.error('API Error:', error);
       let errorMessage = 'Failed to send message. Please try again.';
@@ -107,90 +110,96 @@ const ChatWindow = () => {
   };
 
   return (
-    <Container 
-      maxW={{ base: "100%", md: "90%", lg: "800px" }} 
-      h={isMobile ? `${windowHeight}px` : "100vh"}
-      py={4}
-      px={{ base: 2, md: 4 }}
-      display="flex"
-      flexDirection="column"
-      position="relative"
-    >
-      <VStack 
-        h="full" 
-        spacing={4}
-        maxH={isMobile ? `${windowHeight}px` : "100vh"}
-        overflow="hidden"
+      <Container
+          maxW={{ base: '100%', md: '90%', lg: '800px' }}
+          h={isMobile ? `${windowHeight}px` : '100vh'}
+          py={4}
+          px={{ base: 2, md: 4 }}
+          display="flex"
+          flexDirection="column"
+          position="relative"
       >
-        <Box
-          flex={1}
-          w="full"
-          overflowY="auto"
-          p={4}
-          borderRadius="md"
-          bg="gray.50"
-          css={{
-            '&::-webkit-scrollbar': {
-              width: '4px',
-            },
-            '&::-webkit-scrollbar-track': {
-              width: '6px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: 'gray.300',
-              borderRadius: '24px',
-            },
-          }}
+        <VStack
+            h="full"
+            spacing={4}
+            maxH={isMobile ? `${windowHeight}px` : '100vh'}
+            overflow="hidden"
         >
-          {messages.map((message, index) => (
-            <Flex
-              key={index}
-              justify={message.isUser ? 'flex-end' : 'flex-start'}
-              mb={4}
-            >
-              <Box
-                maxW={{ base: "85%", md: "70%" }}
-                bg={message.isUser ? 'blue.500' : 'white'}
-                color={message.isUser ? 'white' : 'black'}
-                p={3}
-                borderRadius="lg"
-                boxShadow="sm"
-              >
-                <Text>{message.text}</Text>
-              </Box>
-            </Flex>
-          ))}
-        </Box>
-        <Flex 
-          w="full" 
-          gap={2}
-          position="sticky"
-          bottom={0}
-          bg="white"
-          pt={2}
-          pb={isMobile ? 4 : 2}
-        >
-          <Input
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Type your message..."
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-          />
-          <Button
-            colorScheme="blue"
-            onClick={handleSendMessage}
-            isLoading={isLoading}
+          <Box
+              flex={1}
+              w="full"
+              overflowY="auto"
+              p={4}
+              borderRadius="md"
+              bg="gray.50"
+              css={{
+                '&::-webkit-scrollbar': { width: '4px' },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'gray.300',
+                  borderRadius: '24px',
+                },
+              }}
           >
-            Send
-          </Button>
-          <Button
-              colorScheme="red"
-              onClick={handleLogout}>
-            Logout
-          </Button>
-        </Flex>
-      </VStack>
-    </Container>
+            {messages.map((message, index) => (
+                <Flex
+                    key={index}
+                    justify={message.isUser ? 'flex-end' : 'flex-start'}
+                    mb={4}
+                >
+                  <Box
+                      maxW={{ base: '85%', md: '70%' }}
+                      bg={message.isUser ? 'blue.500' : 'white'}
+                      color={message.isUser ? 'white' : 'black'}
+                      p={3}
+                      borderRadius="lg"
+                      boxShadow="sm"
+                  >
+                    {['image', 'video', 'preview'].includes(message.type) ? (
+                        <>
+                          <MediaMessage
+                              declaredType={resolveMediaType(message.type, message.url)}
+                              url={message.url}
+                              caption={message.caption}
+                          />
+                          {message.content && (
+                              <Text className="text-sm mt-2">{message.content}</Text>
+                          )}
+                        </>
+                    ) : (
+                        <Text>{message.content}</Text>
+                    )}
+                  </Box>
+                </Flex>
+            ))}
+          </Box>
+          <Flex
+              w="full"
+              gap={2}
+              position="sticky"
+              bottom={0}
+              bg="white"
+              pt={2}
+              pb={isMobile ? 4 : 2}
+          >
+            <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Type your message..."
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            />
+            <Button
+                colorScheme="blue"
+                onClick={handleSendMessage}
+                isLoading={isLoading}
+            >
+              Send
+            </Button>
+            <Button colorScheme="red" onClick={handleLogout}>
+              Logout
+            </Button>
+          </Flex>
+        </VStack>
+      </Container>
   );
 };
 
