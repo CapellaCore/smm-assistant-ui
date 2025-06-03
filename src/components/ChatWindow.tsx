@@ -15,14 +15,20 @@ import { config } from '../config';
 import {getAuthToken, storeTokenFromUrl, logout} from "../utils/auth.ts";
 import { useNavigate } from 'react-router-dom';
 import MediaMessage from './MediaMessage';
+import FileUpload from './FileUpload';
 import { resolveMediaType } from '../utils/mediaUtils.tsx';
+import type { UploadResponse } from '../services/fileUpload';
 
 interface Message {
-  type: 'text' | 'image' | 'video';
+  type: 'text' | 'image' | 'video' | 'file';
   content?: string;
   url?: string;
   caption?: string;
   isUser: boolean;
+  // File-specific properties
+  uploadResponse?: UploadResponse;
+  fileName?: string;
+  fileSize?: number;
 }
 
 const ChatWindow = () => {
@@ -50,6 +56,43 @@ const ChatWindow = () => {
     navigate('/');
   };
 
+  const handleFileUploaded = (uploadResponse: UploadResponse, file: File) => {
+    const fileMessage: Message = {
+      type: 'file',
+      isUser: true,
+      uploadResponse,
+      fileName: file.name,
+      fileSize: file.size,
+    };
+
+    setMessages((prev) => [...prev, fileMessage]);
+
+    // Optionally send the file URL to the chat API
+    // You can modify this to send file information to your chat API
+    // For now, we'll just add it to the chat
+  };
+
+  // Function to parse markdown images from text
+  const parseMarkdownImages = (text: string) => {
+    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const images: { alt: string; url: string }[] = [];
+    let match;
+    
+    while ((match = imageRegex.exec(text)) !== null) {
+      images.push({
+        alt: match[1] || 'Image',
+        url: match[2]
+      });
+    }
+    
+    return images;
+  };
+
+  // Function to remove markdown images from text
+  const removeMarkdownImages = (text: string) => {
+    return text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '').trim();
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -74,13 +117,40 @@ const ChatWindow = () => {
 
       const data = response.data;
 
-      const aiMessages: Message[] = (data.messages || []).map((msg: any) => ({
-        type: msg.type,
-        content: msg.content,
-        url: msg.url,
-        caption: msg.caption,
-        isUser: false,
-      }));
+      let aiMessages: Message[] = [];
+
+      // Handle different possible response formats
+      if (data.messages && Array.isArray(data.messages)) {
+        // Expected format: { messages: [...] }
+        aiMessages = data.messages.map((msg: any) => ({
+          type: msg.type || 'text',
+          content: msg.content,
+          url: msg.url,
+          caption: msg.caption,
+          isUser: false,
+        }));
+      } else if (data.content || data.message) {
+        // Fallback: single message in response
+        aiMessages = [{
+          type: 'text',
+          content: data.content || data.message,
+          isUser: false,
+        }];
+      } else if (typeof data === 'string') {
+        // Fallback: response is just a string
+        aiMessages = [{
+          type: 'text',
+          content: data,
+          isUser: false,
+        }];
+      } else {
+        // Last resort: stringify the response
+        aiMessages = [{
+          type: 'text',
+          content: JSON.stringify(data),
+          isUser: false,
+        }];
+      }
 
       setMessages((prev) => [...prev, ...aiMessages]);
     } catch (error) {
@@ -180,12 +250,18 @@ const ChatWindow = () => {
               bg="white"
               pt={2}
               pb={isMobile ? 4 : 2}
+              align="center"
           >
+            <FileUpload
+              onFileUploaded={handleFileUploaded}
+              isDisabled={isLoading}
+            />
             <Input
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Type your message..."
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                flex={1}
             />
             <Button
                 colorScheme="blue"
@@ -203,4 +279,4 @@ const ChatWindow = () => {
   );
 };
 
-export default ChatWindow; 
+export default ChatWindow;
