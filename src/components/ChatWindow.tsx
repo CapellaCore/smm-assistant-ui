@@ -15,6 +15,7 @@ import { config } from '../config';
 import {getAuthToken, storeTokenFromUrl, logout} from "../utils/auth.ts";
 import { useNavigate } from 'react-router-dom';
 import MediaMessage from './MediaMessage';
+import FileMessage from './FileMessage';
 import FileUpload from './FileUpload';
 import DebugInfo from './DebugInfo';
 import EnvironmentBanner from './EnvironmentBanner';
@@ -241,13 +242,20 @@ const ChatWindow = () => {
                 >
                   <Box
                       maxW={{ base: '85%', md: '70%' }}
-                      bg={message.isUser ? 'blue.500' : 'white'}
+                      bg={message.type === 'file' ? 'transparent' : (message.isUser ? 'blue.500' : 'white')}
                       color={message.isUser ? 'white' : 'black'}
-                      p={3}
+                      p={message.type === 'file' ? 0 : 3}
                       borderRadius="lg"
-                      boxShadow="sm"
+                      boxShadow={message.type === 'file' ? 'none' : 'sm'}
                   >
-                    {['image', 'video', 'preview'].includes(message.type) ? (
+                    {message.type === 'file' && message.uploadResponse && message.fileName ? (
+                        <FileMessage
+                            uploadResponse={message.uploadResponse}
+                            fileName={message.fileName}
+                            fileSize={message.fileSize}
+                            isUser={message.isUser}
+                        />
+                    ) : ['image', 'video', 'preview'].includes(message.type) ? (
                         <>
                           <MediaMessage
                               declaredType={resolveMediaType(message.type, message.url)}
