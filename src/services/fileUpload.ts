@@ -54,27 +54,40 @@ export class FileUploadService {
       xhr.onload = () => {
         console.log('Upload response status:', xhr.status);
         console.log('Upload response text:', xhr.responseText);
+        console.log('Upload API URL:', `${config.apiUrl}/api/v1/files/upload`);
+        console.log('Auth token present:', !!getAuthToken());
         
         if (xhr.status === 200) {
           try {
             const response = JSON.parse(xhr.responseText);
             resolve(response);
           } catch (error) {
+            console.error('Failed to parse upload response:', error);
             reject(new Error('Invalid response format'));
           }
         } else if (xhr.status === 403) {
           try {
             const errorResponse = JSON.parse(xhr.responseText);
             console.error('403 Forbidden response:', errorResponse);
+            console.error('This might indicate a dev/prod environment mismatch or token issue');
             reject(new Error(`Access denied: ${errorResponse.error || 'Authentication failed or insufficient permissions'}`));
           } catch {
+            console.error('403 Forbidden - unparseable response');
             reject(new Error('Access denied: Authentication failed or insufficient permissions'));
           }
         } else {
           try {
             const errorResponse = JSON.parse(xhr.responseText);
-            reject(new Error(errorResponse.error || `Upload failed with status ${xhr.status}`));
+            console.error('Upload error response:', errorResponse);
+            
+            // Check for the Russian error message
+            if (errorResponse.error && errorResponse.error.includes('Возникла ошибка при обращении к AI')) {
+              reject(new Error('AI service error: Please check your environment configuration and authentication'));
+            } else {
+              reject(new Error(errorResponse.error || `Upload failed with status ${xhr.status}`));
+            }
           } catch {
+            console.error('Upload failed with unparseable error response');
             reject(new Error(`Upload failed with status ${xhr.status}`));
           }
         }

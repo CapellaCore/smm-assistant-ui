@@ -16,6 +16,8 @@ import {getAuthToken, storeTokenFromUrl, logout} from "../utils/auth.ts";
 import { useNavigate } from 'react-router-dom';
 import MediaMessage from './MediaMessage';
 import FileUpload from './FileUpload';
+import DebugInfo from './DebugInfo';
+import EnvironmentBanner from './EnvironmentBanner';
 import { resolveMediaType } from '../utils/mediaUtils.tsx';
 import type { UploadResponse } from '../services/fileUpload';
 
@@ -155,13 +157,33 @@ const ChatWindow = () => {
       setMessages((prev) => [...prev, ...aiMessages]);
     } catch (error) {
       console.error('API Error:', error);
+      console.error('API URL being used:', `${config.apiUrl}/api/v1/smm-assistant/ask`);
+      console.error('Auth token present:', !!getAuthToken());
+      console.error('Config debug:', config);
+      
       let errorMessage = 'Failed to send message. Please try again.';
       
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
           errorMessage = 'Request timed out. Please try again.';
         } else if (error.response) {
-          errorMessage = `Server error: ${error.response.status}`;
+          console.error('Error response data:', error.response.data);
+          console.error('Error response status:', error.response.status);
+          console.error('Error response headers:', error.response.headers);
+          
+          // Check if the error response contains the Russian error message
+          if (error.response.data && typeof error.response.data === 'object') {
+            if (error.response.data.messages && Array.isArray(error.response.data.messages)) {
+              const errorMsg = error.response.data.messages.find((msg: any) => 
+                msg.content && msg.content.includes('Возникла ошибка при обращении к AI')
+              );
+              if (errorMsg) {
+                errorMessage = 'AI service error. Please check your authentication and try again.';
+              }
+            }
+          }
+          
+          errorMessage = `Server error: ${error.response.status} - ${errorMessage}`;
         } else if (error.request) {
           errorMessage = 'No response received from server. Please check your connection.';
         }
@@ -195,6 +217,7 @@ const ChatWindow = () => {
             maxH={isMobile ? `${windowHeight}px` : '100vh'}
             overflow="hidden"
         >
+          <EnvironmentBanner />
           <Box
               flex={1}
               w="full"
@@ -275,6 +298,7 @@ const ChatWindow = () => {
             </Button>
           </Flex>
         </VStack>
+        <DebugInfo />
       </Container>
   );
 };
