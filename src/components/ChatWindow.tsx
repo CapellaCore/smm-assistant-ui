@@ -22,15 +22,24 @@ interface InstagramMediaUrl {
     url: string;
     type: 'image_url' | 'video_url';
 }
+import FileMessage from './FileMessage';
+import FileUpload from './FileUpload';
+import DebugInfo from './DebugInfo';
+import EnvironmentBanner from './EnvironmentBanner';
+import type { UploadResponse } from '../services/fileUpload';
 
 interface Message {
-    type: 'text' | 'image' | 'video';
+    type: 'text' | 'image' | 'video' | 'file';
     content?: string;
     mediaUrls?: InstagramMediaUrl[];
     caption?: string;
     postType?: 'IMAGE' | 'VIDEO' | 'STORY' | 'CAROUSEL';
     platform?: string;
     isUser: boolean;
+  // File-specific properties
+  uploadResponse?: UploadResponse;
+  fileName?: string;
+  fileSize?: number;
 }
 
 function handleNotificationMessage(message: any, setMessages: React.Dispatch<React.SetStateAction<Message[]>>) {
@@ -125,7 +134,42 @@ const ChatWindow = () => {
         navigate('/');
     };
 
-    const handleSendMessage = async () => {
+    const handleFileUploaded = (uploadResponse: UploadResponse, file: File) => {
+    const fileMessage: Message = {
+      type: 'file',
+      isUser: true,
+      uploadResponse,
+      fileName: file.name,
+      fileSize: file.size,
+    };
+
+    setMessages((prev) => [...prev, fileMessage]);
+
+    // Optionally send the file URL to the chat API
+    // You can modify this to send file information to your chat API
+    // For now, we'll just add it to the chat
+  };
+
+  // Function to parse markdown images from text
+  const parseMarkdownImages = (text: string) => {
+    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const images: { alt: string; url: string }[] = [];
+    let match;
+
+    while ((match = imageRegex.exec(text)) !== null) {
+      images.push({
+        alt: match[1] || 'Image',
+        url: match[2]
+      });
+    }
+
+    return images;
+  };
+
+  // Function to remove markdown images from text
+  const removeMarkdownImages = (text: string) => {
+    return text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '').trim();
+  };const handleSendMessage = async () => {
         if (!inputMessage.trim()) return;
 
         const userMessage = inputMessage;
@@ -160,13 +204,32 @@ const ChatWindow = () => {
             setMessages((prev) => [...prev, ...aiMessages]);
         } catch (error) {
             console.error('API Error:', error);
+            console.error('API URL being used:', `${config.apiUrl}/api/v1/smm-assistant/ask`);
+            console.error('Auth token present:', !!getAuthToken());
+            console.error('Config debug:', config);
             let errorMessage = 'Failed to send message. Please try again.';
 
             if (axios.isAxiosError(error)) {
                 if (error.code === 'ECONNABORTED') {
                     errorMessage = 'Request timed out. Please try again.';
                 } else if (error.response) {
-                    errorMessage = `Server error: ${error.response.status}`;
+                    console.error('Error response data:', error.response.data);
+                    console.error('Error response status:', error.response.status);
+                    console.error('Error response headers:', error.response.headers);
+
+                    // Check if the error response contains the Russian error message
+                    if (error.response.data && typeof error.response.data === 'object') {
+                        if (error.response.data.messages && Array.isArray(error.response.data.messages)) {
+                            const errorMsg = error.response.data.messages.find((msg: any) =>
+                                msg.content && msg.content.includes('Возникла ошибка при обращении к AI')
+                            );
+                            if (errorMsg) {
+                                errorMessage = 'AI service error. Please check your authentication and try again.';
+                            }
+                        }
+                    }
+
+                    errorMessage = `Server error: ${error.response.status} - ${errorMessage}`;
                 } else if (error.request) {
                     errorMessage = 'No response received from server. Please check your connection.';
                 }
@@ -199,6 +262,7 @@ const ChatWindow = () => {
                 maxH={isMobile ? `${windowHeight}px` : '100vh'}
                 overflow="hidden"
             >
+                <EnvironmentBanner />
                 <Box
                     flex={1}
                     w="full"
@@ -221,14 +285,21 @@ const ChatWindow = () => {
                             mb={4}
                         >
                             <Box
-                                maxW={{base: '85%', md: '70%'}}
-                                bg={message.isUser ? 'blue.500' : 'white'}
+                                maxW={{ base: '85%', md: '70%' }}
+                                bg={message.type === 'file' ? 'transparent' : (message.isUser ? 'blue.500' : 'white')}
                                 color={message.isUser ? 'white' : 'black'}
-                                p={3}
+                                p={message.type === 'file' ? 0 : 3}
                                 borderRadius="lg"
-                                boxShadow="sm"
+                                boxShadow={message.type === 'file' ? 'none' : 'sm'}
                             >
-                                {message.mediaUrls?.length ? (
+                                {message.type === 'file' && message.uploadResponse && message.fileName ? (
+                                    <FileMessage
+                                        uploadResponse={message.uploadResponse}
+                                        fileName={message.fileName}
+                                        fileSize={message.fileSize}
+                                        isUser={message.isUser}
+                                    />
+                                ) : message.mediaUrls?.length ? (
                                     <>
                                         {message.content && (
                                             <Text className="text-sm mt-2">{message.content}</Text>
@@ -257,12 +328,18 @@ const ChatWindow = () => {
                     bg="white"
                     pt={2}
                     pb={isMobile ? 4 : 2}
+                    align="center"
                 >
+                    <FileUpload
+                        onFileUploaded={handleFileUploaded}
+                        isDisabled={isLoading}
+                    />
                     <Input
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         placeholder="Type your message..."
                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        flex={1}
                     />
                     <Button
                         colorScheme="blue"
@@ -276,8 +353,9 @@ const ChatWindow = () => {
                     </Button>
                 </Flex>
             </VStack>
+            <DebugInfo />
         </Container>
     );
 };
 
-export default ChatWindow; 
+export default ChatWindow;
