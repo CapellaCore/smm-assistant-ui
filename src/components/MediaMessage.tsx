@@ -1,24 +1,23 @@
 import React from 'react';
-import { resolveMediaType } from '../utils/mediaUtils.tsx';
 
 interface MediaMessageProps {
-    declaredType?: 'image' | 'video' | 'preview';
-    url?: string;
+    declaredType?: 'image_url' | 'video_url' ;
+    mediaUrl?: string;
     caption?: string;
 }
 
 
-const MediaMessage: React.FC<MediaMessageProps> = ({ declaredType, url, caption }) => {
-    const type = resolveMediaType(declaredType, url);
-    if (!type || !url) return null;
+const MediaMessage: React.FC<MediaMessageProps> = ({ declaredType, mediaUrl, caption }) => {
+
+    if (!declaredType || !mediaUrl) return null;
 
     return (
         <div className="media-block p-2 rounded-xl bg-white shadow-md max-w-md">
-            {type === 'image' ? (
-                <img src={url} alt="media" className="rounded-xl w-full object-cover" />
+            {declaredType === 'image_url' ? (
+                <img src={mediaUrl} alt="media" className="rounded-xl w-full object-cover" />
             ) : (
                 <video controls className="rounded-xl w-full">
-                    <source src={url} type="video/mp4" />
+                    <source src={mediaUrl} type="video/mp4" />
                     Your browser does not support the video tag.
                 </video>
             )}
