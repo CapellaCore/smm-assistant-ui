@@ -151,25 +151,27 @@ const ChatWindow = () => {
   };
 
   // Function to parse markdown images from text
-  const parseMarkdownImages = (text: string) => {
-    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-    const images: { alt: string; url: string }[] = [];
-    let match;
-
-    while ((match = imageRegex.exec(text)) !== null) {
-      images.push({
-        alt: match[1] || 'Image',
-        url: match[2]
-      });
-    }
-
-    return images;
-  };
+  // const parseMarkdownImages = (text: string) => {
+  //   const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  //   const images: { alt: string; url: string }[] = [];
+  //   let match;
+  //
+  //   while ((match = imageRegex.exec(text)) !== null) {
+  //     images.push({
+  //       alt: match[1] || 'Image',
+  //       url: match[2]
+  //     });
+  //   }
+  //
+  //   return images;
+  // };
 
   // Function to remove markdown images from text
-  const removeMarkdownImages = (text: string) => {
-    return text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '').trim();
-  };const handleSendMessage = async () => {
+  // const removeMarkdownImages = (text: string) => {
+  //   return text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '').trim();
+  // };
+
+  const handleSendMessage = async () => {
         if (!inputMessage.trim()) return;
 
         const userMessage = inputMessage;
